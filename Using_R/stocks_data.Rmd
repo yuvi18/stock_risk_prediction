@@ -1,0 +1,45 @@
+---
+title: "ESG"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+install.packages("jsonlite", repos="https://cran.rstudio.com/")
+library("jsonlite")
+```
+
+```{r}
+json_file <- 'https://datahub.io/core/s-and-p-500-companies-financials/datapackage.json'
+json_data <- fromJSON(paste(readLines(json_file), collapse=""))
+```
+
+```{r}
+print(json_data$resources$name)
+```
+
+```{r}
+# print all tabular data(if exists any)
+for(i in 1:length(json_data$resources$datahub$type)){
+  if(json_data$resources$datahub$type[i]=='derived/csv'){
+    path_to_file = json_data$resources$path[i]
+    data <- read.csv(url(path_to_file))
+    print(data)
+  }
+}
+```
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

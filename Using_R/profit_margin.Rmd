@@ -1,0 +1,304 @@
+---
+title: "LinearRegression"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+set.seed(7)
+# load the library
+library(mlbench)
+library(caret)
+library(VIM)
+library(Amelia)
+library(zoo)
+```
+
+
+```{r}
+# read in embedding
+filepath = '~/Documents/Documents/Medeiros/UNT/research/stock_risk_prediction/Using_R'
+setwd(filepath)
+embeddings <- read.csv('S&P 500 Embeddings.csv')
+
+```
+
+```{r}
+# read in NPF and trim data set
+data <- read.csv('2018_Financial_Data.csv')
+revenue_data <- subset(data, select = c(Symbol, Revenue, Revenue.Growth, Gross.Profit, Operating.Expenses, Operating.Income,SG.A.Expense,EBITDA.Margin,Total.current.assets,Net.Profit.Margin,Investments,grossProfitMargin,returnOnEquity,Investments))
+```
+
+```{r}
+# combine data sets
+#df <- merge(embeddings, revenue_data, by="Symbol")
+df <- merge(embeddings, data, by="Symbol")
+```
+
+```{r}
+dataset <- df[4:231]
+```
+
+```{r}
+dataset$Total.non.current.assets <- NULL
+dataset$Total.non.current.liabilities <- NULL
+dataset$returnOnAssets <- NULL
+dataset$operatingCycle <- NULL
+dataset$cashConversionCycle <- NULL
+dataset$shortTermCoverageRatios <- NULL
+dataset$Current.ratio <- NULL
+dataset$ROIC <- NULL
+dataset$Return.on.Tangible.Assets <- NULL
+dataset$Working.Capital <- NULL
+dataset$X10Y.Dividend.per.Share.Growth..per.Share. <- NULL
+dataset$X10Y.Revenue.Growth..per.Share. <- NULL
+dataset$X10Y.Operating.CF.Growth..per.Share. <- NULL
+dataset$X10Y.Net.Income.Growth..per.Share. <- NULL
+dataset$X10Y.Shareholders.Equity.Growth..per.Share. <- NULL
+dataset$priceEarningsToGrowthRatio <- NULL
+dataset$Net.Income...Discontinued.ops <- NULL
+dataset$Preferred.Dividends <- NULL
+dataset$Short.term.investments <- NULL
+dataset$Class <- NULL
+dataset$Net.Income...Non.Controlling.int <- NULL
+dataset$Net.Income...Discontinued.ops <- NULL
+dataset$priceCashFlowRatio <- NULL
+dataset$priceFairValue <- NULL
+dataset$ebtperEBIT <- NULL
+dataset$niperEBT <- NULL
+dataset$effectiveTaxRate <- NULL
+dataset$returnOnCapitalEmployed <- NULL
+dataset$nIperEBT <- NULL
+dataset$fixedAssetTurnover <- NULL
+dataset$eBTperEBIT <- NULL
+dataset$cashFlowToDebtRatio <- NULL
+dataset$companyEquityMultiplier <- NULL
+dataset$cashFlowCoverageRatios <- NULL
+dataset$dividendPayoutRatio <- NULL
+dataset$X5Y.Revenue.Growth..per.Share. <- NULL
+dataset$X5Y.Operating.CF.Growth..per.Share. <- NULL
+dataset$X5Y.Shareholders.Equity.Growth..per.Share. <- NULL
+dataset$R.D.Expenses <- NULL
+dataset$Long.term.investments <- NULL
+dataset$Tax.assets <- NULL
+dataset$Deferred.revenue <- NULL
+dataset$Acquisitions.and.disposals <- NULL
+dataset$Investment.purchases.and.sales <- NULL
+dataset$Effect.of.forex.changes.on.cash <- NULL
+dataset$operatingProfitMargin <- NULL
+```
+
+```{r}
+data.frame(dataset)
+```
+
+
+```{r}
+length(which(is.na(dataset)))
+length(which(!complete.cases(dataset)))
+summary(aggr(dataset[1:182]))
+```
+```{r}
+#dataset[] <- lapply(dataset, na.aggregate)
+dataset <- lapply(dataset, na.aggregate)
+dataset <- data.frame(dataset)
+```
+
+```{r}
+dataset
+```
+
+
+```{r}
+dataset
+```
+
+```{r}
+dataset <- dataset[1:181]
+dataset
+```
+```{r}
+dataset[,colSums(is.na(dataset))==0]
+```
+```{r}
+correlationMatrix
+```
+
+
+```{r}
+correlationMatrix <- cor(dataset)
+# summarize the correlation matrix
+#print(correlationMatrix)
+# find attributes that are highly corrected (ideally >0.75)
+highlyCorrelated <- findCorrelation(correlationMatrix, cutoff=0.5)
+# print indexes of highly correlated attributes
+print(highlyCorrelated)
+```
+
+
+```{r}
+# divide data 30% test 70% train
+sample_size <- floor(0.7*nrow(df))
+train_index <- sample(seq_len(nrow(df)), size = sample_size)
+```
+
+```{r}
+# generate train and test data sets
+train <- dataset[train_index,]
+train <- train[complete.cases(train),]
+test <- dataset[-train_index,]
+test <- test[complete.cases(test),]
+```
+
+```{r}
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+model <- train(Market.Cap~., data=dataset, method="qrnn", preProcess="scale", trControl=control)
+# estimate variable importance
+importance <- varImp(model, scale=FALSE)
+# summarize importance
+print(importance)
+# plot importance
+plot(importance)
+```
+```{r}
+revenue_df <- write.csv(df, 'revenue_data.csv')
+```
+
+```{r}
+revenue_df <- dataset[c("Enterprise.Value","EBIT", "Earnings.before.Tax", "Operating.Cash.Flow", "EBITDA", "Net.Income.Com", "Net.Income", "Consolidated.Income", "Free.Cash.Flow","Gross.Profit", "Income.Tax.Expense", "Financing.Cash.Flow", "Issuance..buybacks..of.shares", "Dividend.payments","Stock.based.compensation", "Operating.Expenses", "Total.shareholders.equity", "Revenue", "Depreciation...Amortization","Feature.1", "Feature.2","Feature.3", "Feature.4")]
+```
+
+```{r}
+revenue_df <- write.csv(revenue_df, 'revenue_data.csv')
+```
+
+```{r}
+revenue_df
+```
+
+```{r}
+model
+```
+
+
+```{r}
+names(getModelInfo())
+```
+
+
+```{r}
+# train linear regression model
+model <- lm(Market.Cap~Enterprise.Value+EBIT+Earnings.before.Tax+Operating.Cash.Flow+Operating.Income+EBITDA+Net.Income.Com +Net.Income+Consolidated.Income +Free.Cash.Flow+Gross.Profit+Income.Tax.Expense+Financing.Cash.Flow+Issuance..buybacks..of.shares+Dividend.payments+Stock.based.compensation+Operating.Expenses+Total.shareholders.equity+Revenue+Depreciation...Amortization+Feature.1+Feature.2+Feature.3+Feature.4, data = train)
+```
+
+```{r}
+summary(model)
+```
+
+```{r}
+# train linear regression model
+model2 <- lm(Enterprise.Value~Market.Cap+EBIT+Earnings.before.Tax+Operating.Cash.Flow+Operating.Income+EBITDA+Net.Income.Com +Net.Income+Consolidated.Income +Free.Cash.Flow+Gross.Profit+Income.Tax.Expense+Financing.Cash.Flow+Issuance..buybacks..of.shares+Dividend.payments+Stock.based.compensation+Operating.Expenses+Total.shareholders.equity+Revenue+Depreciation...Amortization, data = train)
+
+summary(model2)
+```
+```{r}
+
+```
+
+```{r}
+df$returnOnAssets
+```
+```{r}
+# train linear regression model
+model5 <- lm(Revenue.Growth~Market.Cap+returnOnAssets+debtRatio+cashPerShare+Revenue.per.Share+Feature.1+Feature.2+Feature.3+Feature.4, data = df)
+
+summary(model5)
+```
+
+
+```{r}
+# train linear regression model
+# train linear regression model
+model3 <- lm(Enterprise.Value~Market.Cap+EBIT+Earnings.before.Tax+Operating.Cash.Flow+Operating.Income+EBITDA+Net.Income.Com +Net.Income+Consolidated.Income +Free.Cash.Flow+Gross.Profit+Income.Tax.Expense+Financing.Cash.Flow+Issuance..buybacks..of.shares+Dividend.payments+Stock.based.compensation+Operating.Expenses+Total.shareholders.equity+Revenue+Depreciation...Amortization+Feature.1+Feature.2+Feature.3+Feature.4, data = train)
+
+summary(model3)
+```
+
+```{r}
+# train linear regression model
+model4 <- lm(Enterprise.Value~EBIT+Operating.Cash.Flow+Operating.Income+EBITDA+Net.Income +Free.Cash.Flow+Gross.Profit+Income.Tax.Expense+Net.Income.Com+Consolidated.Income+
+               Stock.based.compensation+Operating.Expenses+Depreciation...Amortization
+             #+Feature.1+Feature.2+Feature.3+Feature.4
+             , data = train)
+
+summary(model4)
+```
+
+```{r}
+dataset
+```
+
+
+```{r}
+enterprise_value <- subset(dataset, select = c(EBIT,Operating.Cash.Flow,Operating.Income,EBITDA,Free.Cash.Flow,Gross.Profit,Net.Income.Com,Consolidated.Income,
+               Stock.based.compensation,Dividends.per.Share.Growth
+              ,Days.Payables.Outstanding,daysOfInventoryOutstanding,Enterprise.Value))
+
+enterprise_value
+write.csv(enterprise_value, 'enterprise_value.csv')
+```
+```{r}
+enterprise_value_vectors <- subset(dataset, select = c(EBIT,Operating.Cash.Flow,Operating.Income,EBITDA,Free.Cash.Flow,Gross.Profit,Net.Income.Com,Consolidated.Income,
+               Stock.based.compensation,Dividends.per.Share.Growth,Days.Payables.Outstanding,daysOfInventoryOutstanding,Feature.1,Feature.2,Feature.3,Feature.4,Enterprise.Value))
+
+enterprise_value_vectors
+write.csv(enterprise_value_vectors, 'enterprise_value_vectors.csv')
+```
+
+
+```{r}
+model5 <- lm(Enterprise.Value~EBIT+Operating.Cash.Flow+Operating.Income+EBITDA+Free.Cash.Flow+Gross.Profit+Net.Income.Com+Consolidated.Income+
+               Stock.based.compensation+Dividends.per.Share.Growth
+              +Days.Payables.Outstanding+daysOfInventoryOutstanding
+               #+Feature.1+Feature.2+Feature.3+Feature.4
+             ,data = train)
+
+summary(model5)
+#df$Enterprise.Value.over.EBITDA
+#df$daysOfInventoryOutstanding
+```
+
+
+```{r}
+summary(model)
+```
+```{r}
+# predict NPM
+prediction <- predict(model, newdata = test)
+cor.test(prediction, test$Net.Profit.Margin, use = 'complete')
+actual <- data.frame(cbind(actual=test$Net.Profit.Margin, predicted=prediction))
+actual
+cor(actual)
+```
+
+```{r}
+# diagnostic graphs
+layout(matrix(c(1,2,3,4),2,2))
+plot(model)
+```
+
+```{r}
+### REGULARIZATION ###
+
+# remove NA samples
+rtrain <- train[complete.cases(train),]
+```
+
+```{r}
+# cross validation: 5-fold CV x2
+fitControl <- trainControl(method = 'repeatedcv', number = 5, repeats = 2)
+```
+
